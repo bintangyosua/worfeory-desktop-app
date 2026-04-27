@@ -1,0 +1,159 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Worfeory — Entropy-Based Wordle Solver</title>
+  <link rel="stylesheet" href="style.css" />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+</head>
+<body>
+  <div id="app">
+    <!-- Loading -->
+    <div id="loading" class="loading-screen">
+      <div class="loading-icon">⚡</div>
+      <p>Loading solver engine...</p>
+    </div>
+
+    <!-- Main App (hidden until loaded) -->
+    <div id="main" class="main-container" style="display:none;">
+      <!-- Header -->
+      <header class="header">
+        <div class="header-inner">
+          <div class="header-left">
+            <span class="logo-icon">⚡</span>
+            <h1>Worfeory</h1>
+            <span class="badge">Desktop</span>
+          </div>
+          <div class="header-right">
+            <button class="btn btn-ghost" id="helpBtn">
+              <span class="btn-icon">ℹ</span> How to use
+            </button>
+            <button class="btn btn-outline" id="resetBtn">
+              <span class="btn-icon">↺</span> Reset
+            </button>
+          </div>
+        </div>
+      </header>
+
+      <!-- Help Banner -->
+      <div id="helpBanner" class="help-banner" style="display:none;">
+        <div class="help-inner">
+          <div class="help-step">
+            <span class="step-num">1</span>
+            <p>Type a word or click a suggestion, then <strong>click each tile</strong> to set its color based on Wordle's feedback.</p>
+          </div>
+          <div class="help-step">
+            <span class="step-num">2</span>
+            <p>Press <strong>Enter</strong> to submit. The solver filters words and suggests optimal guesses.</p>
+          </div>
+          <div class="help-step">
+            <span class="step-num">3</span>
+            <p>Suggestions ranked by <strong>information entropy</strong> — higher bits = more information.</p>
+          </div>
+        </div>
+      </div>
+
+      <!-- Game Message -->
+      <div id="gameMessage" class="game-message" style="display:none;"></div>
+
+      <!-- Content -->
+      <main class="content">
+        <!-- Left: Board + Keyboard -->
+        <div class="left-panel">
+          <!-- Legend -->
+          <div class="legend">
+            <div class="legend-item"><div class="legend-swatch correct"></div><span>Correct</span></div>
+            <div class="legend-item"><div class="legend-swatch present"></div><span>Present</span></div>
+            <div class="legend-item"><div class="legend-swatch absent"></div><span>Absent</span></div>
+          </div>
+
+          <!-- Board -->
+          <div id="board" class="board"></div>
+
+          <div class="separator"></div>
+
+          <!-- Keyboard -->
+          <div id="keyboard" class="keyboard"></div>
+        </div>
+
+        <!-- Right: Suggestions -->
+        <div class="right-panel">
+          <div class="sticky-wrapper">
+            <!-- Suggestion Panel -->
+            <div class="card">
+              <div class="card-header">
+                <h2>Solver Suggestions</h2>
+                <p id="remainingCount" class="subtitle">Loading...</p>
+              </div>
+              <div class="card-body">
+                <div id="suggestionsArea" class="suggestions-area">
+                  <p class="muted">Enter a word and set tile colors to get suggestions.</p>
+                </div>
+              </div>
+            </div>
+
+            <!-- Possible Words -->
+            <div class="card">
+              <div class="card-header">
+                <h2>Top Possible Words</h2>
+              </div>
+              <div class="card-body">
+                <div id="possibleWords" class="possible-words">
+                  <p class="muted">Loading...</p>
+                </div>
+              </div>
+            </div>
+
+            <!-- Calculate Button -->
+            <button class="btn btn-primary btn-full" id="calcBtn">
+              💡 Get Suggestions
+            </button>
+
+            <!-- Starter Words -->
+            <div class="card">
+              <div class="card-header">
+                <h2>Starter Words</h2>
+                <p class="subtitle">Optimized openers (~3.42 guesses avg). Click to use.</p>
+              </div>
+              <div class="card-body">
+                <div class="starter-grid">
+                  <div>
+                    <p class="starter-label">Fastest Avg</p>
+                    <div class="starter-list" id="starterFastest"></div>
+                  </div>
+                  <div>
+                    <p class="starter-label">Fewest 5+</p>
+                    <div class="starter-list" id="starterFewest"></div>
+                  </div>
+                  <div>
+                    <p class="starter-label">Hard Mode</p>
+                    <div class="starter-list" id="starterHard"></div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Info Card -->
+            <div class="card">
+              <div class="card-body info-card">
+                <p><strong>Algorithm:</strong> Information entropy (Shannon)</p>
+                <p><strong>Inspired by:</strong> 3Blue1Brown's Wordle video</p>
+                <p><strong>Dictionary:</strong> <span id="dictCount">—</span> five-letter words</p>
+                <p><strong>Engine:</strong> Rust (native) via Tauri</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </main>
+
+      <!-- Footer -->
+      <footer class="footer">
+        <p>Created By Minuettaro</p>
+      </footer>
+    </div>
+  </div>
+
+  <script src="app.js"></script>
+</body>
+</html>
