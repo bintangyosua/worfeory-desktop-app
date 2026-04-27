@@ -23,6 +23,8 @@ let gameMessage = '';
 let gameWon = false;
 let isCalculating = false;
 let recomputeVersion = 0;
+let navCursor = null;    // { row, col } when navigating tiles
+let navDebounce = null;  // debounce timer for recompute during nav
 
 // ── Tauri IPC ─────────────────────────────────────────────────────
 async function invoke(cmd, args) {
@@ -108,6 +110,11 @@ function updateBoardDisplay() {
     if (rowWord.length === 5 && !gameWon) {
       el.classList.add('clickable');
     }
+
+    // Navigation cursor highlight
+    if (navCursor && navCursor.row === r && navCursor.col === c) {
+      el.classList.add('nav-focus');
+    }
   });
 }
 
@@ -119,6 +126,9 @@ function handleTileClick(row, col) {
   // Allow clicking on any row that has a fully filled word
   const rowWord = board[row].map(t => t.letter).join('');
   if (rowWord.length !== 5) return;
+
+  // Also set nav cursor to this tile
+  navCursor = { row, col };
 
   const idx = STATE_ORDER.indexOf(tile.state);
   tile.state = STATE_ORDER[(idx + 1) % STATE_ORDER.length];
@@ -417,6 +427,8 @@ async function resetGame() {
   suggestions = [];
   letterStates = {};
   gameWon = false;
+  navCursor = null;
+  if (navDebounce) { clearTimeout(navDebounce); navDebounce = null; }
   document.getElementById('gameMessage').style.display = 'none';
 
   remainingWords = await invoke('get_wordlist');
@@ -449,6 +461,75 @@ function setupStarterPicker() {
   });
 }
 
+// ── Navigation Mode ───────────────────────────────────────────────
+// Arrow keys: move cursor across filled tiles
+// Space: cycle tile color at cursor
+// Escape: exit nav mode
+// Letter keys: exit nav mode and type normally
+
+function enterNavMode(row, col) {
+  navCursor = { row, col };
+  updateBoardDisplay();
+}
+
+function exitNavMode() {
+  navCursor = null;
+  updateBoardDisplay();
+}
+
+function moveNav(dRow, dCol) {
+  if (!navCursor) {
+    // Enter nav mode at first filled tile of active row (or row 0)
+    const startRow = activeRow > 0 ? activeRow - 1 : 0;
+    const rowWord = board[startRow].map(t => t.letter).join('');
+    if (rowWord.length === 5) {
+      enterNavMode(startRow, 0);
+    }
+    return;
+  }
+
+  let newRow = navCursor.row + dRow;
+  let newCol = navCursor.col + dCol;
+
+  // Clamp column
+  if (newCol < 0) newCol = 0;
+  if (newCol >= COLS) newCol = COLS - 1;
+
+  // Clamp row — only navigate to rows with filled words
+  if (newRow < 0) newRow = 0;
+  if (newRow >= ROWS) newRow = ROWS - 1;
+
+  // Only move to rows that have a full 5-letter word
+  const targetRowWord = board[newRow].map(t => t.letter).join('');
+  if (targetRowWord.length !== 5) {
+    // Try staying on current row, just move column
+    if (dRow !== 0) return;
+  }
+
+  navCursor = { row: newRow, col: newCol };
+  updateBoardDisplay();
+}
+
+function navCycleColor() {
+  if (!navCursor) return;
+  const { row, col } = navCursor;
+  const tile = board[row][col];
+  if (!tile.letter) return;
+
+  const rowWord = board[row].map(t => t.letter).join('');
+  if (rowWord.length !== 5) return;
+
+  const idx = STATE_ORDER.indexOf(tile.state);
+  tile.state = STATE_ORDER[(idx + 1) % STATE_ORDER.length];
+  updateBoardDisplay();
+
+  // Debounce recompute so rapid space presses don't spam the solver
+  if (navDebounce) clearTimeout(navDebounce);
+  navDebounce = setTimeout(() => {
+    recomputeFromRow(row);
+  }, 400);
+}
+
 // ── Event Listeners ───────────────────────────────────────────────
 function setupEventListeners() {
   document.getElementById('helpBtn').addEventListener('click', () => {
@@ -469,13 +550,54 @@ function setupEventListeners() {
   document.addEventListener('keydown', (e) => {
     if (e.ctrlKey || e.altKey || e.metaKey) return;
 
+    // Arrow keys → enter/move nav mode
+    if (['ArrowUp','ArrowDown','ArrowLeft','ArrowRight'].includes(e.key)) {
+      e.preventDefault();
+      const dir = {
+        ArrowUp:    [-1, 0],
+        ArrowDown:  [ 1, 0],
+        ArrowLeft:  [ 0,-1],
+        ArrowRight: [ 0, 1],
+      }[e.key];
+      moveNav(dir[0], dir[1]);
+      return;
+    }
+
+    // Space → cycle color at nav cursor
+    if (e.key === ' ') {
+      e.preventDefault();
+      if (navCursor) {
+        navCycleColor();
+      }
+      return;
+    }
+
+    // Escape → exit nav mode
+    if (e.key === 'Escape') {
+      e.preventDefault();
+      exitNavMode();
+      return;
+    }
+
+    // Backspace → exit nav mode if active, then handle normally
     if (e.key === 'Backspace') {
       e.preventDefault();
+      if (navCursor) exitNavMode();
       handleKey('⌫');
-    } else if (e.key === 'Enter') {
+      return;
+    }
+
+    // Enter → if in nav mode, exit it first, then submit
+    if (e.key === 'Enter') {
       e.preventDefault();
+      if (navCursor) exitNavMode();
       handleKey('Enter');
-    } else if (/^[a-zA-Z]$/.test(e.key)) {
+      return;
+    }
+
+    // Letter keys → exit nav mode and type
+    if (/^[a-zA-Z]$/.test(e.key)) {
+      if (navCursor) exitNavMode();
       handleKey(e.key);
     }
   });

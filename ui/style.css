@@ -390,6 +390,18 @@ body {
   100% { transform: scale(1); }
 }
 
+.tile.nav-focus {
+  outline: 2px solid var(--primary);
+  outline-offset: 2px;
+  animation: navPulse 1.2s ease-in-out infinite;
+  z-index: 2;
+}
+
+@keyframes navPulse {
+  0%, 100% { outline-color: var(--primary); box-shadow: 0 0 8px rgba(108, 99, 255, 0.3); }
+  50% { outline-color: var(--primary-hover); box-shadow: 0 0 16px rgba(108, 99, 255, 0.5); }
+}
+
 /* ── Separator ───────────────────────────────────────────────────── */
 .separator {
   width: 100%;
