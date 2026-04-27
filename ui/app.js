@@ -26,6 +26,7 @@ let letterStates = {};
 let gameMessage = '';
 let gameWon = false;
 let isCalculating = false;
+let recomputeVersion = 0;
 
 // ── Tauri IPC ─────────────────────────────────────────────────────
 async function invoke(cmd, args) {
@@ -105,16 +106,101 @@ function updateBoardDisplay() {
     if (r === activeRow && !gameWon) {
       el.classList.add('active-row');
     }
+
+    // Any filled row is clickable to adjust colors
+    const rowWord = board[r].map(t => t.letter).join('');
+    if (rowWord.length === 5 && !gameWon) {
+      el.classList.add('clickable');
+    }
   });
 }
 
 function handleTileClick(row, col) {
-  if (row !== activeRow || gameWon) return;
+  if (gameWon) return;
   const tile = board[row][col];
   if (!tile.letter) return;
 
+  // Allow clicking on any row that has a fully filled word
+  const rowWord = board[row].map(t => t.letter).join('');
+  if (rowWord.length !== 5) return;
+
   const idx = STATE_ORDER.indexOf(tile.state);
   tile.state = STATE_ORDER[(idx + 1) % STATE_ORDER.length];
+  updateBoardDisplay();
+
+  // Recompute suggestions from row 0 up to this row
+  recomputeFromRow(row);
+}
+
+async function recomputeFromRow(upToRow) {
+  const thisVersion = ++recomputeVersion;
+  isCalculating = true;
+  const area = document.getElementById('suggestionsArea');
+  area.innerHTML = '<div class="calculating"><div class="spinner"></div>Recalculating...</div>';
+  document.getElementById('calcBtn').disabled = true;
+
+  try {
+    // Start from the full wordlist and replay all guesses up to upToRow
+    let filtered = await invoke('get_wordlist');
+
+    for (let r = 0; r <= upToRow; r++) {
+      const word = board[r].map(t => t.letter).join('');
+      if (word.length !== 5) break;
+
+      const pattern = board[r].map(t => {
+        if (t.state === 'correct') return 'C';
+        if (t.state === 'present') return 'P';
+        return 'A';
+      }).join('');
+
+      filtered = await invoke('apply_guess', {
+        remainingWords: filtered, guess: word, pattern
+      });
+    }
+
+    // Bail if a newer recompute was triggered
+    if (thisVersion !== recomputeVersion) return;
+
+    remainingWords = filtered;
+    updateRemainingCount();
+    await updateTopPossibleWords();
+
+    // Set active row to the next row after the clicked one
+    activeRow = upToRow + 1;
+    currentCol = 0;
+
+    // Clear all rows after the new active row (when going back)
+    for (let r = activeRow + 1; r < ROWS; r++) {
+      for (let c = 0; c < COLS; c++) {
+        board[r][c] = { letter: '', state: 'empty' };
+      }
+    }
+
+    if (remainingWords.length === 0) {
+      suggestions = [];
+      renderSuggestions();
+      showMessage('No matching words found!', false);
+    } else if (activeRow < ROWS) {
+      // Calculate suggestions for next row
+      suggestions = await invoke('get_suggestions', {
+        remainingWords, topN: 10
+      });
+      renderSuggestions();
+
+      // Auto-fill top suggestion into next row
+      if (suggestions.length > 0) {
+        selectSuggestion(suggestions[0].word);
+      }
+    }
+  } catch (e) {
+    console.error('Recompute failed:', e);
+    suggestions = [];
+    renderSuggestions();
+  }
+
+  isCalculating = false;
+  document.getElementById('calcBtn').disabled = false;
+  document.getElementById('calcBtn').textContent = '💡 Recalculate';
   updateBoardDisplay();
 }
 
@@ -200,17 +286,21 @@ async function submitGuess() {
     return 'A';
   }).join('');
 
-  // Update keyboard letter states
-  for (let i = 0; i < 5; i++) {
-    const letter = board[activeRow][i].letter;
-    const tileState = board[activeRow][i].state;
-    const existing = letterStates[letter];
-    if (
-      tileState === 'correct' ||
-      (tileState === 'present' && existing !== 'correct') ||
-      (tileState === 'absent' && !existing)
-    ) {
-      letterStates[letter] = tileState;
+  // Update keyboard letter states from all submitted rows
+  letterStates = {};
+  for (let r = 0; r <= activeRow; r++) {
+    for (let i = 0; i < 5; i++) {
+      const letter = board[r][i].letter;
+      const tileState = board[r][i].state;
+      if (!letter) continue;
+      const existing = letterStates[letter];
+      if (
+        tileState === 'correct' ||
+        (tileState === 'present' && existing !== 'correct') ||
+        (tileState === 'absent' && !existing)
+      ) {
+        letterStates[letter] = tileState;
+      }
     }
   }
   updateKeyboardDisplay();
@@ -222,30 +312,8 @@ async function submitGuess() {
     return;
   }
 
-  // Filter remaining words via Rust
-  remainingWords = await invoke('apply_guess', {
-    remainingWords, guess: word, pattern
-  });
-  updateRemainingCount();
-  await updateTopPossibleWords();
-
-  if (remainingWords.length === 0) {
-    showMessage('No matching words found!', false);
-    return;
-  }
-
-  // Next row
-  activeRow++;
-  currentCol = 0;
-  updateBoardDisplay();
-
-  if (activeRow >= ROWS) {
-    showMessage('Out of guesses!', false);
-    return;
-  }
-
-  // Auto-calculate suggestions
-  await calculateSuggestions();
+  // Use recomputeFromRow which replays all rows from scratch
+  await recomputeFromRow(activeRow);
 }
 
 // ── Suggestions ───────────────────────────────────────────────────
