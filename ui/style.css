@@ -224,19 +224,27 @@ body {
   color: var(--text);
 }
 
-/* ── Game Message ────────────────────────────────────────────────── */
+/* ── Game Message (Toast — floats above content) ────────────────── */
 .game-message {
+  position: fixed;
+  top: 64px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 200;
   text-align: center;
   padding: 8px;
-  animation: slideDown 0.2s ease;
+  pointer-events: none;
+  animation: slideDown 0.25s ease;
 }
 
 .game-message .msg-badge {
   display: inline-block;
-  padding: 6px 20px;
+  padding: 8px 24px;
   border-radius: 99px;
   font-size: 13px;
   font-weight: 600;
+  pointer-events: auto;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.4);
 }
 
 .msg-badge.success {
@@ -249,11 +257,12 @@ body {
   background: rgba(239, 68, 68, 0.15);
   color: var(--danger);
   border: 1px solid rgba(239, 68, 68, 0.3);
+  backdrop-filter: blur(8px);
 }
 
 @keyframes slideDown {
-  from { opacity: 0; transform: translateY(-8px); }
-  to { opacity: 1; transform: translateY(0); }
+  from { opacity: 0; transform: translateX(-50%) translateY(-12px); }
+  to { opacity: 1; transform: translateX(-50%) translateY(0); }
 }
 
 /* ── Content Layout ──────────────────────────────────────────────── */
