@@ -11,11 +11,7 @@ const KB_ROWS = [
   ['a','s','d','f','g','h','j','k','l'],
   ['Enter','z','x','c','v','b','n','m','⌫']
 ];
-const STARTERS = {
-  fastest: ['salet','reast','crate','trace','slate','crane'],
-  fewest: ['rance','rants','rated','ronte','alter','lance'],
-  hard: ['salet','cramp']
-};
+let selectedStarter = 'salet';
 
 let board = [];       // 6 rows of 5 tiles: { letter, state }
 let activeRow = 0;
@@ -42,9 +38,9 @@ async function init() {
 
     createBoard();
     createKeyboard();
-    setupStarterWords();
+    setupStarterPicker();
     setupEventListeners();
-    selectSuggestion('salet');
+    selectSuggestion(selectedStarter);
     await updateTopPossibleWords();
 
     document.getElementById('loading').style.display = 'none';
@@ -426,7 +422,7 @@ async function resetGame() {
   remainingWords = await invoke('get_wordlist');
   createBoard();
   createKeyboard();
-  selectSuggestion('salet');
+  selectSuggestion(selectedStarter);
   await updateTopPossibleWords();
   updateRemainingCount();
 
@@ -435,22 +431,21 @@ async function resetGame() {
   document.getElementById('calcBtn').textContent = '💡 Get Suggestions';
 }
 
-// ── Starter Words ─────────────────────────────────────────────────
-function setupStarterWords() {
-  populateStarters('starterFastest', STARTERS.fastest);
-  populateStarters('starterFewest', STARTERS.fewest);
-  populateStarters('starterHard', STARTERS.hard);
-}
+// ── Starter Picker ────────────────────────────────────────────────
+function setupStarterPicker() {
+  const options = document.querySelectorAll('.starter-option');
+  options.forEach(btn => {
+    btn.addEventListener('click', () => {
+      const word = btn.dataset.word;
+      selectedStarter = word;
 
-function populateStarters(containerId, words) {
-  const container = document.getElementById(containerId);
-  container.innerHTML = '';
-  words.forEach(w => {
-    const btn = document.createElement('button');
-    btn.className = 'starter-word';
-    btn.textContent = w;
-    btn.addEventListener('click', () => selectSuggestion(w));
-    container.appendChild(btn);
+      // Update active state
+      options.forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+
+      // Fill the board if on a clean row
+      selectSuggestion(word);
+    });
   });
 }
 

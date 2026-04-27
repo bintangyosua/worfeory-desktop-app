@@ -548,49 +548,55 @@ body {
   letter-spacing: 0.05em;
 }
 
-/* ── Starter Words ───────────────────────────────────────────────── */
-.starter-grid {
+/* ── Starter Picker ──────────────────────────────────────────────── */
+.starter-picker {
   display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: 12px;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
 }
 
-.starter-label {
-  font-size: 11px;
-  font-weight: 500;
-  color: var(--text-muted);
-  margin-bottom: 6px;
-  text-align: center;
-}
-
-.starter-list {
+.starter-option {
   display: flex;
   flex-direction: column;
-  gap: 3px;
-}
-
-.starter-word {
-  display: block;
-  width: 100%;
-  padding: 4px;
-  text-align: center;
-  font-family: 'Courier New', monospace;
-  font-size: 12px;
-  font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: 0.08em;
-  background: transparent;
-  border: none;
-  border-radius: var(--radius-sm);
-  color: var(--text-muted);
+  align-items: center;
+  gap: 4px;
+  padding: 12px 8px;
+  background: var(--bg-input);
+  border: 2px solid var(--border);
+  border-radius: var(--radius);
   cursor: pointer;
-  transition: all var(--transition);
+  transition: all 200ms ease;
   font-family: var(--font);
 }
 
-.starter-word:hover {
+.starter-option:hover {
   background: var(--bg-card-hover);
+  border-color: var(--border-light);
+}
+
+.starter-option.active {
+  border-color: var(--primary);
+  background: rgba(108, 99, 255, 0.08);
+  box-shadow: 0 0 16px rgba(108, 99, 255, 0.12);
+}
+
+.starter-option-word {
+  font-family: 'Courier New', monospace;
+  font-size: 18px;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.15em;
   color: var(--text);
+}
+
+.starter-option.active .starter-option-word {
+  color: var(--primary);
+}
+
+.starter-option-desc {
+  font-size: 11px;
+  color: var(--text-dim);
+  font-weight: 500;
 }
 
 /* ── Info Card ───────────────────────────────────────────────────── */

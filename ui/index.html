@@ -110,26 +110,22 @@
               💡 Get Suggestions
             </button>
 
-            <!-- Starter Words -->
+            <!-- Starter Picker -->
             <div class="card">
               <div class="card-header">
-                <h2>Starter Words</h2>
-                <p class="subtitle">Optimized openers (~3.42 guesses avg). Click to use.</p>
+                <h2>Choose Starter Word</h2>
+                <p class="subtitle">Select your preferred opening word</p>
               </div>
               <div class="card-body">
-                <div class="starter-grid">
-                  <div>
-                    <p class="starter-label">Fastest Avg</p>
-                    <div class="starter-list" id="starterFastest"></div>
-                  </div>
-                  <div>
-                    <p class="starter-label">Fewest 5+</p>
-                    <div class="starter-list" id="starterFewest"></div>
-                  </div>
-                  <div>
-                    <p class="starter-label">Hard Mode</p>
-                    <div class="starter-list" id="starterHard"></div>
-                  </div>
+                <div class="starter-picker">
+                  <button class="starter-option active" id="starterSalet" data-word="salet">
+                    <span class="starter-option-word">SALET</span>
+                    <span class="starter-option-desc">Fastest average solve</span>
+                  </button>
+                  <button class="starter-option" id="starterTares" data-word="tares">
+                    <span class="starter-option-word">TARES</span>
+                    <span class="starter-option-desc">High entropy opener</span>
+                  </button>
                 </div>
               </div>
             </div>
