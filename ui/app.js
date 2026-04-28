@@ -105,9 +105,9 @@ function updateBoardDisplay() {
       el.classList.add('active-row');
     }
 
-    // Any filled row is clickable to adjust colors
+    // Any filled row is clickable to adjust colors (even after winning)
     const rowWord = board[r].map(t => t.letter).join('');
-    if (rowWord.length === 5 && !gameWon) {
+    if (rowWord.length === 5) {
       el.classList.add('clickable');
     }
 
@@ -119,7 +119,6 @@ function updateBoardDisplay() {
 }
 
 function handleTileClick(row, col) {
-  if (gameWon) return;
   const tile = board[row][col];
   if (!tile.letter) return;
 
@@ -194,6 +193,12 @@ async function recomputeFromRow(upToRow) {
       document.getElementById('calcBtn').disabled = false;
       document.getElementById('calcBtn').textContent = '💡 Recalculate';
       return;
+    }
+
+    // If previously won but tiles were changed, resume the game
+    if (gameWon) {
+      gameWon = false;
+      document.getElementById('gameMessage').style.display = 'none';
     }
 
     if (remainingWords.length === 0) {
