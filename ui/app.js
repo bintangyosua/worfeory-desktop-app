@@ -182,6 +182,20 @@ async function recomputeFromRow(upToRow) {
       }
     }
 
+    // Check if the row we just set has all tiles correct (win condition)
+    const rowPattern = board[upToRow].map(t => t.state);
+    if (rowPattern.every(s => s === 'correct')) {
+      gameWon = true;
+      suggestions = [];
+      renderSuggestions();
+      showMessage('🎉 Solved!', true);
+      updateBoardDisplay();
+      isCalculating = false;
+      document.getElementById('calcBtn').disabled = false;
+      document.getElementById('calcBtn').textContent = '💡 Recalculate';
+      return;
+    }
+
     if (remainingWords.length === 0) {
       suggestions = [];
       renderSuggestions();

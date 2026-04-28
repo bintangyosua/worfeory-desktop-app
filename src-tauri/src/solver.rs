@@ -50,11 +50,6 @@ fn check_pattern(guess: &str, answer: &str) -> [u8; 5] {
     pattern
 }
 
-/// Convert pattern bytes to string (for serialization)
-fn pattern_to_string(pattern: &[u8; 5]) -> String {
-    String::from_utf8_lossy(pattern).to_string()
-}
-
 /// Return the entropy of a guess given a word list of available answers
 fn entropy(wordlist: &[String], guess: &str) -> f64 {
     let mut total_prob: f64 = 0.0;
