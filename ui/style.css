@@ -567,6 +567,19 @@ body {
   gap: 8px;
 }
 
+.mode-picker {
+  grid-template-columns: 1fr 1fr 1fr;
+}
+
+.mode-picker .starter-option {
+  padding: 8px 4px;
+}
+
+.mode-picker .starter-option-word {
+  font-size: 14px;
+  letter-spacing: 0.05em;
+}
+
 .starter-option {
   display: flex;
   flex-direction: column;
@@ -609,6 +622,32 @@ body {
   font-size: 11px;
   color: var(--text-dim);
   font-weight: 500;
+}
+
+/* ── Simulation Input ────────────────────────────────────────────── */
+.sim-input-group {
+  display: flex;
+  gap: 8px;
+}
+
+.input-field {
+  flex: 1;
+  background: var(--bg-input);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  color: var(--text);
+  font-family: 'Courier New', monospace;
+  font-size: 16px;
+  font-weight: 700;
+  text-transform: uppercase;
+  padding: 8px 12px;
+  outline: none;
+  width: 100%;
+}
+
+.input-field:focus {
+  border-color: var(--primary);
+  box-shadow: 0 0 0 2px var(--primary-glow);
 }
 
 /* ── Info Card ───────────────────────────────────────────────────── */

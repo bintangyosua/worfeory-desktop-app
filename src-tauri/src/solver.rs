@@ -94,8 +94,14 @@ pub fn get_wordlist() -> Vec<String> {
     WORDLIST.clone()
 }
 
+#[derive(Serialize, Deserialize, Clone)]
+pub struct GuessHistory {
+    pub guess: String,
+    pub pattern: String,
+}
+
 #[tauri::command]
-pub fn get_suggestions(remaining_words: Vec<String>, top_n: usize) -> Vec<SolverSuggestion> {
+pub fn get_suggestions(remaining_words: Vec<String>, history: Vec<GuessHistory>, mode: String, top_n: usize) -> Vec<SolverSuggestion> {
     if remaining_words.is_empty() {
         return vec![];
     }
@@ -118,8 +124,50 @@ pub fn get_suggestions(remaining_words: Vec<String>, top_n: usize) -> Vec<Solver
         ];
     }
 
-    let total_wordlist = &*WORDLIST;
-    let mut scored: Vec<SolverSuggestion> = total_wordlist
+    let candidates_pool: Vec<String> = match mode.as_str() {
+        "rookie" => WORDLIST.clone(),
+        "veteran" => {
+            let mut history_parsed = Vec::new();
+            for h in history {
+                let guess_bytes: [u8; 5] = h.guess.as_bytes()[..5].try_into().unwrap();
+                let mut pat_bytes = [0u8; 5];
+                let p = h.pattern.as_bytes();
+                for i in 0..5 {
+                    pat_bytes[i] = match p[i] {
+                        b'C' => 2,
+                        b'P' => 1,
+                        _ => 0,
+                    };
+                }
+                history_parsed.push((guess_bytes, pat_bytes));
+            }
+            
+            WORDLIST.iter()
+                .filter(|&word| {
+                    let w_bytes = word.as_bytes();
+                    for (guess, pattern) in &history_parsed {
+                        for i in 0..5 {
+                            if pattern[i] == 2 {
+                                if w_bytes[i] != guess[i] {
+                                    return false;
+                                }
+                            } else if pattern[i] == 1 {
+                                if !w_bytes.contains(&guess[i]) {
+                                    return false;
+                                }
+                            }
+                        }
+                    }
+                    true
+                })
+                .cloned()
+                .collect()
+        },
+        "legend" => remaining_words.clone(),
+        _ => WORDLIST.clone(),
+    };
+
+    let mut scored: Vec<SolverSuggestion> = candidates_pool
         .iter()
         .map(|word| {
             let score = entropy(&remaining_words, word);

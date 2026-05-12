@@ -110,6 +110,27 @@
               💡 Get Suggestions
             </button>
 
+            <!-- Mode Picker -->
+            <div class="card">
+              <div class="card-header">
+                <h2>Solver Mode</h2>
+                <p class="subtitle">Select the difficulty constraints</p>
+              </div>
+              <div class="card-body">
+                <div class="starter-picker mode-picker" id="modePicker">
+                  <button class="starter-option active" data-mode="rookie">
+                    <span class="starter-option-word">Rookie</span>
+                  </button>
+                  <button class="starter-option" data-mode="veteran">
+                    <span class="starter-option-word">Veteran</span>
+                  </button>
+                  <button class="starter-option" data-mode="legend">
+                    <span class="starter-option-word">Legend</span>
+                  </button>
+                </div>
+              </div>
+            </div>
+
             <!-- Starter Picker -->
             <div class="card">
               <div class="card-header">
@@ -120,12 +141,26 @@
                 <div class="starter-picker">
                   <button class="starter-option active" id="starterSalet" data-word="salet">
                     <span class="starter-option-word">SALET</span>
-                    <span class="starter-option-desc">Fastest average solve</span>
+                    <span class="starter-option-desc">Fastest solve</span>
                   </button>
                   <button class="starter-option" id="starterTares" data-word="tares">
                     <span class="starter-option-word">TARES</span>
-                    <span class="starter-option-desc">High entropy opener</span>
+                    <span class="starter-option-desc">High entropy</span>
                   </button>
+                </div>
+              </div>
+            </div>
+
+            <!-- Simulation -->
+            <div class="card">
+              <div class="card-header">
+                <h2>Simulate Game</h2>
+                <p class="subtitle">Enter target word to auto-solve</p>
+              </div>
+              <div class="card-body">
+                <div class="sim-input-group">
+                  <input type="text" id="simTarget" maxlength="5" placeholder="e.g. CRANE" class="input-field" />
+                  <button class="btn btn-primary" id="simBtn">Simulate</button>
                 </div>
               </div>
             </div>

@@ -12,6 +12,7 @@ const KB_ROWS = [
   ['Enter','z','x','c','v','b','n','m','⌫']
 ];
 let selectedStarter = 'salet';
+let selectedMode = 'rookie';
 
 let board = [];       // 6 rows of 5 tiles: { letter, state }
 let activeRow = 0;
@@ -25,6 +26,7 @@ let isCalculating = false;
 let recomputeVersion = 0;
 let navCursor = null;    // { row, col } when navigating tiles
 let navDebounce = null;  // debounce timer for recompute during nav
+let isSimulating = false;
 
 // ── Tauri IPC ─────────────────────────────────────────────────────
 async function invoke(cmd, args) {
@@ -41,6 +43,7 @@ async function init() {
     createBoard();
     createKeyboard();
     setupStarterPicker();
+    setupModePicker();
     setupEventListeners();
     selectSuggestion(selectedStarter);
     await updateTopPossibleWords();
@@ -208,7 +211,7 @@ async function recomputeFromRow(upToRow) {
     } else if (activeRow < ROWS) {
       // Calculate suggestions for next row
       suggestions = await invoke('get_suggestions', {
-        remainingWords, topN: 10
+        remainingWords, history: buildHistory(upToRow), mode: selectedMode, topN: 10
       });
       renderSuggestions();
 
@@ -350,7 +353,7 @@ async function calculateSuggestions() {
 
   try {
     suggestions = await invoke('get_suggestions', {
-      remainingWords, topN: 10
+      remainingWords, history: buildHistory(activeRow > 0 ? activeRow - 1 : -1), mode: selectedMode, topN: 10
     });
   } catch {
     suggestions = [];
@@ -462,9 +465,118 @@ async function resetGame() {
   document.getElementById('calcBtn').textContent = '💡 Get Suggestions';
 }
 
-// ── Starter Picker ────────────────────────────────────────────────
+// ── Simulation Logic ──────────────────────────────────────────────
+async function simulateGame(targetWord) {
+  if (targetWord.length !== 5) return;
+  targetWord = targetWord.toLowerCase();
+  
+  const valid = await invoke('is_valid_word', { word: targetWord });
+  if (!valid) {
+    showMessage('Target word not in dictionary!', false);
+    return;
+  }
+
+  isSimulating = true;
+  document.getElementById('simBtn').disabled = true;
+
+  try {
+    await resetGame();
+
+    for (let r = 0; r < ROWS; r++) {
+      // Pick best guess
+      if (r === 0) {
+        selectSuggestion(selectedStarter);
+      } else {
+        if (suggestions.length === 0) {
+          showMessage('No words left to guess!', false);
+          break;
+        }
+        selectSuggestion(suggestions[0].word);
+      }
+
+      // Evaluate against target word
+      const guess = board[activeRow].map(t => t.letter).join('');
+      let remainingTarget = targetWord.split('');
+      const pattern = ['A', 'A', 'A', 'A', 'A'];
+      
+      // Pass 1: Correct
+      for (let i = 0; i < 5; i++) {
+        if (guess[i] === remainingTarget[i]) {
+          pattern[i] = 'C';
+          remainingTarget[i] = '.';
+        }
+      }
+      // Pass 2: Present
+      for (let i = 0; i < 5; i++) {
+        if (pattern[i] !== 'C') {
+          const idx = remainingTarget.indexOf(guess[i]);
+          if (idx !== -1) {
+            pattern[i] = 'P';
+            remainingTarget[idx] = '.';
+          }
+        }
+      }
+
+      // Apply pattern to board UI
+      for (let i = 0; i < 5; i++) {
+        board[activeRow][i].state = pattern[i] === 'C' ? 'correct' : (pattern[i] === 'P' ? 'present' : 'absent');
+      }
+      updateBoardDisplay();
+
+      // Submit the guess
+      await submitGuess();
+
+      if (gameWon) break;
+      
+      // Delay for visual effect
+      await new Promise(res => setTimeout(res, 500));
+    }
+  } finally {
+    isSimulating = false;
+    document.getElementById('simBtn').disabled = false;
+  }
+}
+
+// ── Mode & Starter Pickers ──────────────────────────────────────────
+function setupModePicker() {
+  const options = document.querySelectorAll('#modePicker .starter-option');
+  options.forEach(btn => {
+    btn.addEventListener('click', () => {
+      selectedMode = btn.dataset.mode;
+      options.forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      
+      const simTarget = document.getElementById('simTarget').value.trim();
+      if (simTarget.length === 5) {
+        // Automatically run simulation for the new mode
+        simulateGame(simTarget);
+      } else if (activeRow > 0) {
+        recomputeFromRow(activeRow - 1);
+      } else {
+        calculateSuggestions();
+      }
+    });
+  });
+}
+
+function buildHistory(upToRow) {
+  const h = [];
+  if (upToRow < 0) return h;
+  for (let r = 0; r <= upToRow; r++) {
+    const word = board[r].map(t => t.letter).join('');
+    if (word.length !== 5) break;
+    const pattern = board[r].map(t => {
+      if (t.state === 'correct') return 'C';
+      if (t.state === 'present') return 'P';
+      return 'A';
+    }).join('');
+    h.push({ guess: word, pattern });
+  }
+  return h;
+}
+
 function setupStarterPicker() {
-  const options = document.querySelectorAll('.starter-option');
+  const options = document.querySelectorAll('.starter-option:not([data-mode])');
   options.forEach(btn => {
     btn.addEventListener('click', () => {
       const word = btn.dataset.word;
@@ -559,15 +671,31 @@ function setupEventListeners() {
   document.getElementById('resetBtn').addEventListener('click', resetGame);
 
   document.getElementById('calcBtn').addEventListener('click', async () => {
-    if (!isCalculating) {
+    if (!isCalculating && !isSimulating) {
       await calculateSuggestions();
       document.getElementById('calcBtn').textContent = '💡 Recalculate';
     }
   });
 
+  // Simulation
+  document.getElementById('simBtn').addEventListener('click', () => {
+    if (isSimulating) return;
+    const target = document.getElementById('simTarget').value.trim();
+    if (target) simulateGame(target);
+  });
+  
+  document.getElementById('simTarget').addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') {
+      document.getElementById('simBtn').click();
+    }
+  });
+
   // Physical keyboard
   document.addEventListener('keydown', (e) => {
-    if (e.ctrlKey || e.altKey || e.metaKey) return;
+    if (e.ctrlKey || e.altKey || e.metaKey || isSimulating) return;
+    
+    // Ignore global keyboard events if user is typing in an input field
+    if (e.target.tagName === 'INPUT') return;
 
     // Arrow keys → enter/move nav mode
     if (['ArrowUp','ArrowDown','ArrowLeft','ArrowRight'].includes(e.key)) {
